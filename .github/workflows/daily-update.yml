@@ -1,0 +1,82 @@
+name: Daily Data Update & Deploy
+
+on:
+  schedule:
+    - cron: '0 21 * * *'  # UTC 21:00 = 한국시간 매일 오전 6시
+  workflow_dispatch:        # 수동 실행 가능
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 1. 선관위 API 데이터 수집
+      - name: Fetch candidate data from NEC API
+        run: node scripts/fetch-candidates.mjs
+        env:
+          NEC_API_KEY: ${{ secrets.NEC_API_KEY }}
+
+      # 2. 스탯 계산 (네이버 트렌드 포함)
+      - name: Calculate stats
+        run: node scripts/calculate-stats.mjs
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+
+      # 3. 뉴스 수집
+      - name: Update news
+        run: node scripts/update-news.mjs
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+
+      # 4. Next.js 빌드
+      - name: Build static site
+        run: npx next build
+        env:
+          NEXT_PUBLIC_ADSENSE_ID: ca-pub-1373380930577652
+
+      # 5. sitemap + 정적 파일 복사
+      - name: Generate sitemap & copy static files
+        run: |
+          node scripts/generate-sitemap.mjs
+          cp public/ads.txt out/ads.txt
+          cp public/.htaccess out/.htaccess
+
+      # 6. FTP 배포
+      - name: Deploy to SiteGround via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ftp.njoblog.net
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          local-dir: ./out/
+          server-dir: /njoblog.net/public_html/
+          dangerous-clean-slate: false
+
+  # 트렌드 업데이트 (주 2회)
+  trends:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 21 * * 1' || github.event.schedule == '0 21 * * 4'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Update trends
+        run: node scripts/update-trends.mjs
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}

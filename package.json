@@ -1,0 +1,35 @@
+{
+  "name": "polosseum",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "fetch": "node scripts/fetch-candidates.mjs",
+    "stats": "node scripts/calculate-stats.mjs",
+    "update-news": "node scripts/update-news.mjs",
+    "update-trends": "node scripts/update-trends.mjs",
+    "maintain": "node scripts/maintain.mjs",
+    "generate-mock": "node scripts/generate-mock.mjs",
+    "sitemap": "node scripts/generate-sitemap.mjs",
+    "deploy": "node scripts/deploy.mjs",
+    "automate": "node scripts/automate.mjs"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "next": "^15.3.0",
+    "react": "^19.2.0",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.1",
+    "autoprefixer": "^10.4.27",
+    "basic-ftp": "^5.0.5",
+    "dotenv": "^16.4.7",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.2.1"
+  }
+}
