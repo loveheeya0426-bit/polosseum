@@ -94,7 +94,7 @@ async function fetchNaverTrend(name, region) {
     keywordGroups: [
       {
         groupName: name,
-        keywords: [name, `${name} ${region}`, `${name} 후보`],
+        keywords: [`${name} ${region}`.trim(), `${name} 후보`, `${name} ${region} 후보`.trim()],
       },
     ],
   };
@@ -150,10 +150,13 @@ async function fetchNaverTrendsBatch(candidates) {
       startDate: formatDate(startDate),
       endDate: formatDate(endDate),
       timeUnit: 'week',
-      keywordGroups: batch.map(c => ({
-        groupName: c.name,
-        keywords: [c.name],
-      })),
+      keywordGroups: batch.map(c => {
+        const district = c.district || c.region || '';
+        const keywords = [`${c.name} ${district}`.trim()];
+        if (c.electionType) keywords.push(`${c.name} ${c.electionType}`);
+        if (district && c.electionType) keywords.push(`${c.name} ${district} ${c.electionType}`);
+        return { groupName: c.name, keywords };
+      }),
     };
 
     try {
@@ -196,75 +199,177 @@ async function fetchNaverTrendsBatch(candidates) {
 function calcPopularity(candidate, trendMap) {
   const trendValue = trendMap.get(candidate.name);
 
+  // 선거유형별 인지도 상한 (동명이인 방지)
+  const capByType = {
+    '시도지사': 90,
+    '교육감': 80,
+    '시장': 75,
+    '군수': 70,
+    '구청장': 72,
+    '시도의원': 60,
+    '시군구의원': 55,
+  };
+  const cap = capByType[candidate.electionType] || 70;
+
   if (trendValue !== undefined && trendValue !== null) {
     // 네이버 트렌드 값 (0~100) → 스탯 점수 매핑
-    // 트렌드 값은 상대적이므로 보정 필요
-    return Math.min(99, Math.max(15, Math.round(20 + trendValue * 0.79)));
+    const raw = Math.round(20 + trendValue * 0.6);
+    return Math.min(cap, Math.max(15, raw));
   }
 
-  // 트렌드 데이터 없을 때: 선거 유형 기반 기본값
+  // 트렌드 데이터 없을 때: 선거 유형 기반 기본값 (이름 해시로 결정적 변동)
   const baseByType = {
-    '시도지사': 55,
-    '교육감': 45,
-    '시장': 40,
-    '군수': 35,
-    '구청장': 38,
-    '시도의원': 25,
-    '시군구의원': 20,
+    '시도지사': 50,
+    '교육감': 40,
+    '시장': 35,
+    '군수': 30,
+    '구청장': 33,
+    '시도의원': 22,
+    '시군구의원': 18,
   };
-  const base = baseByType[candidate.electionType] || 30;
-  // 약간의 변동성 추가
-  return Math.min(99, Math.max(10, base + Math.round((Math.random() - 0.5) * 15)));
+  const base = baseByType[candidate.electionType] || 25;
+  const hash = nameHash(candidate.name + (candidate.district || ''));
+  const variation = (hash % 11) - 5; // -5 ~ +5
+  return Math.min(cap, Math.max(10, base + variation));
 }
 
 // ─── 3. 청렴도 점수 (integrity) ───
-// 기준: 전과 기록(감점), 납세 실적, 병역 이행
+// 기준: 이름 기반 결정적 해시 + 선거유형 + 경력 키워드 분석
+// 후보마다 고유한 점수가 나오도록 이름 해시를 시드로 사용
+function nameHash(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
 function calcIntegrity(candidate) {
-  let score = 80; // 기본 80점에서 감점/가점
+  const career = candidate.career || [];
+  const careerText = career.join(' ');
+  const allText = `${careerText} ${candidate.edu || ''} ${candidate.job || ''}`;
 
-  const careerText = (candidate.career || []).join(' ');
-  const allText = `${careerText} ${candidate.name}`;
+  // 이름 해시로 후보별 미세 변동 부여 (기본 60, ±5 범위)
+  // 부정적 근거가 없는 후보가 불이익 받지 않도록 좁은 범위 사용
+  const hash = nameHash(candidate.name || candidate.id || '');
+  let score = 57 + (hash % 11); // 57~67
 
-  // ── 전과 기록 감점 ──
-  // 선관위 API 응답에 전과 정보가 있을 경우
-  if (candidate._raw) {
-    const criminalRecord = candidate._raw.criminalRecord || candidate._raw.crmRecordCn || '';
-    if (criminalRecord && criminalRecord !== '없음' && criminalRecord.trim()) {
-      // 전과 건수에 따라 감점
-      const count = (criminalRecord.match(/건/g) || []).length || 1;
-      score -= Math.min(count * 12, 40);
+  // ── 경력 기반 가점 ──
+  const publicKeywords = ['공무원', '사무관', '서기관', '주사', '공단', '공사', '지방자치'];
+  let publicCount = 0;
+  for (const kw of publicKeywords) {
+    if (careerText.includes(kw)) publicCount++;
+  }
+  score += Math.min(publicCount * 2, 6);
 
-      // 중범죄 추가 감점
-      const severeKeywords = ['징역', '금고', '실형', '구속'];
-      for (const kw of severeKeywords) {
-        if (criminalRecord.includes(kw)) { score -= 15; break; }
-      }
-    }
+  // 시민사회/봉사 경력 가점
+  const civilKeywords = ['봉사', '시민단체', 'NGO', '사회복지', '적십자', '자원봉사', '재단'];
+  for (const kw of civilKeywords) {
+    if (allText.includes(kw)) { score += 4; break; }
   }
 
-  // ── 병역 미이행 감점 ──
-  if (candidate._raw) {
-    const military = candidate._raw.militaryRecord || candidate._raw.mltrlSttusNm || '';
-    const exemptKeywords = ['면제', '미필', '기피'];
-    for (const kw of exemptKeywords) {
-      if (military.includes(kw)) { score -= 8; break; }
-    }
-  }
-
-  // ── 납세 체납 감점 ──
-  if (candidate._raw) {
-    const tax = candidate._raw.taxRecord || candidate._raw.arrearsTaxCn || '';
-    if (tax && tax !== '없음' && tax.includes('체납')) {
-      score -= 15;
-    }
-  }
-
-  // ── 경력 기반 보정 (데이터 부족 시) ──
-  // 법조/감사 경력 = 약간 가점
-  const integrityKeywords = ['감사원', '검찰', '법원', '청렴', '윤리', '반부패'];
+  // 청렴/윤리 관련 가점
+  const integrityKeywords = ['청렴', '윤리', '반부패', '공익', '투명', '감사', '옴부즈만'];
   for (const kw of integrityKeywords) {
-    if (careerText.includes(kw)) { score += 5; break; }
+    if (allText.includes(kw)) { score += 5; break; }
   }
+
+  // 교육/학술 경력 가점
+  if (allText.includes('교수') || allText.includes('연구') || allText.includes('학교')) {
+    score += 3;
+  }
+
+  // ── 부정적 키워드 감점 (경력/학력/직업 텍스트) ──
+  const corruptionKeywords = ['비리', '횡령', '뇌물', '배임', '부패', '불법', '부정'];
+  for (const kw of corruptionKeywords) {
+    if (allText.includes(kw)) { score -= 25; break; }
+  }
+
+  const criminalKeywords = ['징역', '금고', '실형', '구속', '기소', '벌금', '약식', '전과'];
+  for (const kw of criminalKeywords) {
+    if (allText.includes(kw)) { score -= 20; break; }
+  }
+
+  const dismissalKeywords = ['해임', '파면', '사퇴', '물러', '경질', '해직', '직무정지', '직위해제'];
+  for (const kw of dismissalKeywords) {
+    if (allText.includes(kw)) { score -= 15; break; }
+  }
+
+  const controversyKeywords = ['논란', '의혹', '물의', '징계', '고발', '소송', '탄핵'];
+  for (const kw of controversyKeywords) {
+    if (allText.includes(kw)) { score -= 10; break; }
+  }
+
+  // ── 뉴스 기반 보정 (문장 단위 분석: 후보 본인 관련 키워드만 감점) ──
+  if (candidate.recentNews && candidate.recentNews.length > 0) {
+    const name = candidate.name;
+    // 성(1글자) + 후보/시장/의원 등 호칭도 본인 언급으로 인식
+    const surname = name.charAt(0);
+    const namePatterns = [
+      name,
+      `${surname} 후보`, `${surname} 예비후보`,
+      `${surname} 시장`, `${surname} 군수`, `${surname} 구청장`,
+      `${surname} 의원`, `${surname} 지사`, `${surname} 교육감`,
+    ];
+
+    // 뉴스 텍스트를 문장 단위로 분리
+    const newsText = candidate.recentNews.map(n => `${n.title}. ${n.description || ''}`).join(' ');
+    const sentences = newsText.split(/[.!?…]\s*/);
+
+    // 후보 본인이 언급된 문장만 추출
+    const selfSentences = sentences.filter(s =>
+      namePatterns.some(p => s.includes(p))
+    );
+    const selfText = selfSentences.join(' ');
+
+    // 후보 본인이 언급되지 않은 문장의 부정 키워드 (타인 관련 = 감점 없음)
+    // 후보 본인이 언급된 문장의 부정 키워드만 감점
+
+    // 심각한 부패/범죄 키워드 (각각 -10)
+    const severeKw = [
+      '비리', '횡령', '뇌물', '배임', '구속', '기소', '체포', '수사', '실형', '징역',
+      '금품수수', '금품', '뇌물수수', '공금', '착복', '유죄', '유죄판결', '상실',
+    ];
+    let severeCount = 0;
+    for (const kw of severeKw) {
+      if (selfText.includes(kw)) severeCount++;
+    }
+    score -= severeCount * 10;
+
+    // 해임/사퇴/면직 관련 (각각 -8)
+    const dismissKw = [
+      '해임', '파면', '사퇴', '경질', '직무정지', '직위해제', '물러',
+      '면직', '직상실', '자격상실', '당선무효',
+    ];
+    let dismissCount = 0;
+    for (const kw of dismissKw) {
+      if (selfText.includes(kw)) dismissCount++;
+    }
+    score -= dismissCount * 8;
+
+    // 논란/의혹 (각각 -5)
+    const controversyKw = ['논란', '의혹', '물의', '징계', '고발', '소송', '부정', '부패', '불법', '탄핵'];
+    let controvCount = 0;
+    for (const kw of controversyKw) {
+      if (selfText.includes(kw)) controvCount++;
+    }
+    score -= controvCount * 5;
+  }
+
+  // ── 선거유형별 미세 보정 ──
+  const typeAdjust = {
+    '시도지사': 2,
+    '교육감': 3,
+    '시장': 1,
+    '군수': 0,
+    '구청장': 1,
+    '시도의원': -2,
+    '시군구의원': -3,
+  };
+  score += typeAdjust[candidate.electionType] || 0;
+
+  // 경력 항목 수에 따른 미세 변동
+  score += Math.min(career.length, 3);
 
   return Math.min(99, Math.max(10, Math.round(score)));
 }
@@ -275,7 +380,7 @@ function calcCompetency(candidate) {
   let score = 35;
 
   // ── 학력 ──
-  const edu = candidate._raw?.edu || candidate._raw?.eduNm || '';
+  const edu = candidate.edu || '';
   if (edu.includes('박사')) score += 25;
   else if (edu.includes('석사') || edu.includes('대학원')) score += 18;
   else if (edu.includes('대학') || edu.includes('대졸') || edu.includes('학사')) score += 12;
@@ -342,8 +447,8 @@ function calcCommitment(candidate) {
 // 기준: 재산 신고액 (선관위 API 제공)
 function calcFinance(candidate) {
   // 선관위 API에서 재산 정보가 있을 경우
-  if (candidate._raw) {
-    const propertyStr = candidate._raw.property || candidate._raw.prptySttus || '';
+  {
+    const propertyStr = candidate.property || '';
 
     // 숫자 추출 (만원 단위 → 점수 변환)
     const numMatch = propertyStr.match(/([\d,]+)\s*(만원|원|억)/);
@@ -371,7 +476,9 @@ function calcFinance(candidate) {
     '시군구의원': 35,
   };
   const base = baseByType[candidate.electionType] || 40;
-  return Math.min(99, Math.max(10, base + Math.round((Math.random() - 0.5) * 20)));
+  const hash = nameHash(candidate.name + (candidate.district || candidate.region || ''));
+  const variation = (hash % 15) - 7; // -7 ~ +7
+  return Math.min(99, Math.max(10, base + variation));
 }
 
 // ─── 메인 실행 ───

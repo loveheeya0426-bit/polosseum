@@ -93,22 +93,38 @@ async function main() {
 
   for (let i = 0; i < majorCandidates.length; i++) {
     const candidate = majorCandidates[i];
-    const query = `${candidate.name} ${candidate.electionType} ${candidate.region}`;
+    const district = candidate.district || '';
+    const queries = [
+      `${candidate.name} ${candidate.electionType} ${district}`.trim(),
+      `${candidate.name} ${district} 비리 의혹`.trim(),
+    ];
 
     try {
-      const news = await searchNews(query, 3);
+      let allNews = [];
+      for (const query of queries) {
+        const news = await searchNews(query, 3);
+        allNews.push(...news);
+        await new Promise(r => setTimeout(r, 120));
+      }
 
-      if (news.length > 0) {
-        candidate.recentNews = news;
+      // 중복 제거 (링크 기준)
+      const seen = new Set();
+      const uniqueNews = [];
+      for (const n of allNews) {
+        if (!seen.has(n.link)) {
+          seen.add(n.link);
+          uniqueNews.push(n);
+        }
+      }
+
+      if (uniqueNews.length > 0) {
+        candidate.recentNews = uniqueNews.slice(0, 5);
         candidate.newsUpdatedAt = new Date().toISOString();
         updated++;
       }
     } catch {
       errors++;
     }
-
-    // API 부하 방지 (초당 10회 제한)
-    await new Promise(r => setTimeout(r, 120));
 
     if ((i + 1) % 50 === 0) {
       console.log(`   ${i + 1}/${majorCandidates.length}명 처리 (뉴스 있음: ${updated}명)`);

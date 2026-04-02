@@ -1,7 +1,7 @@
 'use client';
 import { memo } from 'react';
 import Link from 'next/link';
-import { PARTY_COLORS, STAT_LABELS } from '../lib/constants';
+import { PARTY_COLORS, ASSEMBLY_STAT_LABELS } from '../lib/constants';
 
 const StatBar = memo(function StatBar({ label, value, colorClass = 'bg-yellow-400' }) {
   return (
@@ -18,10 +18,10 @@ const StatBar = memo(function StatBar({ label, value, colorClass = 'bg-yellow-40
   );
 });
 
-export default memo(function Card({ candidate, onClick, isSelected = false, showDetailButton = true }) {
-  const colors = PARTY_COLORS[candidate.party] || PARTY_COLORS['무소속'];
-  const totalStats = Object.values(candidate.stats).reduce((a, b) => a + b, 0);
-  const overall = Math.round(totalStats / Object.keys(candidate.stats).length);
+export default memo(function AssemblyCard({ member, onClick, isSelected = false, showDetailButton = true }) {
+  const colors = PARTY_COLORS[member.party] || PARTY_COLORS['무소속'];
+  const totalStats = Object.values(member.stats).reduce((a, b) => a + b, 0);
+  const overall = Math.round(totalStats / Object.keys(member.stats).length);
 
   return (
     <div
@@ -40,20 +40,20 @@ export default memo(function Card({ candidate, onClick, isSelected = false, show
           </div>
           <div className="flex flex-col items-end gap-1">
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/40 border border-white/20 text-white">
-              {candidate.party}
+              {member.party}
             </span>
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 border border-white/10 text-white/80">
-              {candidate.electionType}
+              국회의원
             </span>
           </div>
         </div>
 
         {/* Profile Image */}
         <div className="h-32 w-full relative overflow-hidden flex justify-center items-end bg-black/40">
-          {candidate.profileUrl ? (
+          {member.profileUrl ? (
             <img
-              src={candidate.profileUrl}
-              alt={candidate.name}
+              src={member.profileUrl}
+              alt={member.name}
               loading="lazy"
               className="h-full object-contain filter drop-shadow-2xl brightness-110 contrast-125 transition-transform duration-500 group-hover:scale-110 object-bottom"
               onError={(e) => { e.target.style.display = 'none'; }}
@@ -69,20 +69,20 @@ export default memo(function Card({ candidate, onClick, isSelected = false, show
         {/* Info & Stats */}
         <div className="p-3 bg-black/60 flex-1 backdrop-blur-md">
           <h2 className="text-xl font-black text-center mb-0.5 tracking-tight text-white drop-shadow-md">
-            {candidate.name}
+            {member.name}
           </h2>
-          {candidate.district && (
-            <p className="text-center text-[10px] text-slate-400 mb-1">{candidate.region} {candidate.district}</p>
+          {member.district && (
+            <p className="text-center text-[10px] text-slate-400 mb-1">{member.region} {member.district}</p>
           )}
           <div className="w-full h-px bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50 mb-2" />
 
           <div className="space-y-0.5">
-            <StatBar label={STAT_LABELS.experience.label} value={candidate.stats.experience} colorClass="bg-blue-400" />
-            <StatBar label={STAT_LABELS.popularity.label} value={candidate.stats.popularity} colorClass="bg-pink-400" />
-            <StatBar label={STAT_LABELS.integrity.label} value={candidate.stats.integrity} colorClass="bg-green-400" />
-            <StatBar label={STAT_LABELS.competency.label} value={candidate.stats.competency} colorClass="bg-purple-400" />
-            <StatBar label={STAT_LABELS.commitment.label} value={candidate.stats.commitment} colorClass="bg-yellow-400" />
-            <StatBar label={STAT_LABELS.finance.label} value={candidate.stats.finance} colorClass="bg-orange-400" />
+            <StatBar label={ASSEMBLY_STAT_LABELS.intelligence.label} value={member.stats.intelligence} colorClass="bg-blue-400" />
+            <StatBar label={ASSEMBLY_STAT_LABELS.stamina.label} value={member.stats.stamina} colorClass="bg-green-400" />
+            <StatBar label={ASSEMBLY_STAT_LABELS.combat.label} value={member.stats.combat} colorClass="bg-red-400" />
+            <StatBar label={ASSEMBLY_STAT_LABELS.charisma.label} value={member.stats.charisma} colorClass="bg-pink-400" />
+            <StatBar label={ASSEMBLY_STAT_LABELS.wealth.label} value={member.stats.wealth} colorClass="bg-yellow-400" />
+            <StatBar label={ASSEMBLY_STAT_LABELS.defense.label} value={member.stats.defense} colorClass="bg-indigo-400" />
           </div>
         </div>
 
@@ -97,12 +97,12 @@ export default memo(function Card({ candidate, onClick, isSelected = false, show
         )}
       </div>
 
-      {/* Detail Button - 모바일에서도 항상 보이도록 */}
+      {/* Detail Button */}
       {showDetailButton && (
         <Link
-          href={`/candidate/${candidate.id}/`}
+          href={`/assembly/${member.id}/`}
           onClick={(e) => e.stopPropagation()}
-          className="absolute top-2 right-2 bg-slate-800/90 hover:bg-slate-900 text-white backdrop-blur-md text-xs font-bold px-3 py-1.5 rounded-full shadow-md transition-all z-30 border border-slate-600 flex items-center gap-1"
+          className="absolute top-2 right-2 bg-slate-800/80 hover:bg-slate-900 text-white backdrop-blur-md text-[10px] font-bold px-2 py-1 rounded-full shadow-md transition-all z-30 border border-slate-600 flex items-center gap-1 opacity-0 group-hover:opacity-100"
         >
           상세 &rarr;
         </Link>

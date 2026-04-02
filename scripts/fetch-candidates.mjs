@@ -141,7 +141,7 @@ async function fetchPledges(electionId, typeCode, sdName) {
 /**
  * API 응답 항목을 내부 후보 데이터 구조로 변환
  */
-function transformCandidate(item, typeCode, pledgesMap) {
+function transformCandidate(item, typeCode, pledgesMap, idx) {
   const name = item.name || item.cnddtNm || '';
   const party = item.jdName || item.jdNm || '무소속';
   const region = item.sdName || '';
@@ -158,15 +158,31 @@ function transformCandidate(item, typeCode, pledgesMap) {
   const pledgeItems = pledgesMap[candidateKey] || [];
   const pledges = pledgeItems.map(p => p.prmsRealmName || p.prmsTitle || '').filter(Boolean);
 
-  // 경력 파싱 (줄바꿈 구분)
-  const careerRaw = item.career || item.cnddtCareer || '';
-  const career = careerRaw.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+  // 경력 파싱: API는 career1, career2 필드로 분리 제공
+  const careerFields = [];
+  for (let i = 1; i <= 10; i++) {
+    const val = item[`career${i}`];
+    if (val && val.trim()) careerFields.push(val.trim());
+  }
+  // fallback: career 단일 필드
+  if (careerFields.length === 0) {
+    const careerRaw = item.career || item.cnddtCareer || '';
+    if (careerRaw) careerFields.push(...careerRaw.split(/[\n,]/).map(s => s.trim()).filter(Boolean));
+  }
+  const career = careerFields;
 
-  // 스탯 계산 (실제 데이터 기반)
-  const stats = calculateStats(item, pledges.length);
+  // 학력
+  const edu = item.edu || item.eduNm || '';
+
+  // 직업
+  const job = item.job || item.jobNm || '';
+
+  // 스탯 계산 (실제 데이터 기반) - _raw 필드에 원본 보관
+  const enrichedItem = { ...item, edu, job, career: career.join('\n') };
+  const stats = calculateStats(enrichedItem, pledges.length);
 
   return {
-    id: `${typeCode}-${item.huboid || item.giho || name}-${district}`.replace(/\s/g, '_'),
+    id: `${typeCode}-${item.huboid || item.num || idx}`,
     name,
     party,
     electionType,
@@ -174,6 +190,8 @@ function transformCandidate(item, typeCode, pledgesMap) {
     district,
     age: item.age ? parseInt(item.age) : null,
     profileUrl: item.gihoSangImgUrl || '',
+    edu,
+    job,
     career,
     pledges,
     stats,
@@ -268,7 +286,7 @@ async function main() {
       }
 
       // 3. 변환
-      const candidates = rawCandidates.map(item => transformCandidate(item, typeCode, pledgesMap));
+      const candidates = rawCandidates.map((item, idx) => transformCandidate(item, typeCode, pledgesMap, idx));
       allCandidates.push(...candidates);
 
       console.log(`${candidates.length}명`);

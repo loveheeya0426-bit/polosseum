@@ -53,6 +53,15 @@ export const STAT_LABELS = {
   finance: { label: '재정', icon: '💰', color: 'bg-orange-500' },
 };
 
+export const ASSEMBLY_STAT_LABELS = {
+  intelligence: { label: '지력', icon: '📖', color: 'bg-blue-500' },
+  stamina: { label: '체력', icon: '💪', color: 'bg-green-500' },
+  combat: { label: '전투력', icon: '🔥', color: 'bg-red-500' },
+  charisma: { label: '매력', icon: '✨', color: 'bg-pink-500' },
+  wealth: { label: '재력', icon: '💰', color: 'bg-yellow-500' },
+  defense: { label: '방어력', icon: '🛡️', color: 'bg-indigo-500' },
+};
+
 export const SITE_CONFIG = {
   name: '폴로세움',
   nameEn: 'Polosseum',

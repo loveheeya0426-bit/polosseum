@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { SITE_CONFIG } from '../lib/constants';
+import SearchBar from './SearchBar';
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -28,7 +29,19 @@ export default function Header() {
             <Link href="/ranking/" className="px-3 py-2 text-sm font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
               전체 랭킹
             </Link>
-            {/* D-day badge */}
+            <Link href="/assembly/" className="px-3 py-2 text-sm font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+              국회의원
+            </Link>
+            <Link href="/debate/" className="px-3 py-2 text-sm font-bold text-slate-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
+              토론장
+            </Link>
+            <Link href="/vote/" className="px-3 py-2 text-sm font-bold text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+              지지투표
+            </Link>
+            <Link href="/blog/" className="px-3 py-2 text-sm font-bold text-slate-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+              블로그
+            </Link>
+            <SearchBar />
             <DdayBadge />
           </nav>
 
@@ -57,6 +70,21 @@ export default function Header() {
             <Link href="/ranking/" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm font-bold text-slate-600 hover:bg-blue-50 rounded-lg">
               전체 랭킹
             </Link>
+            <Link href="/assembly/" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm font-bold text-slate-600 hover:bg-blue-50 rounded-lg">
+              국회의원
+            </Link>
+            <Link href="/debate/" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm font-bold text-slate-600 hover:bg-orange-50 rounded-lg">
+              토론장
+            </Link>
+            <Link href="/vote/" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm font-bold text-slate-600 hover:bg-red-50 rounded-lg">
+              지지투표
+            </Link>
+            <Link href="/blog/" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm font-bold text-slate-600 hover:bg-green-50 rounded-lg">
+              블로그
+            </Link>
+            <div className="px-3 pt-2">
+              <SearchBar />
+            </div>
             <div className="px-3 pt-2">
               <DdayBadge />
             </div>

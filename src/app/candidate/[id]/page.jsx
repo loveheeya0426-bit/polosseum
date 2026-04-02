@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { getAllCandidates, getCandidateById, getOverallScore } from '../../../lib/candidates';
-import { PARTY_COLORS, STAT_LABELS, SITE_CONFIG } from '../../../lib/constants';
+import { PARTY_COLORS, STAT_LABELS, SITE_CONFIG, REGIONS } from '../../../lib/constants';
 import CandidateDetailClient from './CandidateDetailClient';
+import BackButton from '../../../components/BackButton';
 
 export function generateStaticParams() {
   return getAllCandidates().map(c => ({ id: c.id }));
@@ -53,8 +55,27 @@ export default async function CandidateDetailPage({ params }) {
   const overall = getOverallScore(candidate);
   const colors = PARTY_COLORS[candidate.party] || PARTY_COLORS['무소속'];
 
+  const regionSlug = REGIONS.find(r => r.name === candidate.region)?.slug;
+
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Back Navigation */}
+      <div className="bg-white border-b border-slate-200">
+        <div className="container mx-auto px-4 max-w-5xl py-2 flex items-center gap-2 text-sm">
+          <BackButton />
+          {regionSlug && (
+            <>
+              <span className="text-slate-300">/</span>
+              <Link href={`/region/${regionSlug}/`} className="text-blue-600 hover:text-blue-800 font-bold hover:underline">
+                {candidate.region}
+              </Link>
+            </>
+          )}
+          <span className="text-slate-300">/</span>
+          <span className="text-slate-500 font-medium truncate">{candidate.name}</span>
+        </div>
+      </div>
+
       {/* Hero Header */}
       <div className={`w-full bg-gradient-to-r ${colors.bg} text-white py-8 md:py-12`}>
         <div className="container mx-auto px-4 max-w-5xl flex flex-col md:flex-row items-center gap-6">

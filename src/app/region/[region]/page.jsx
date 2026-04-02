@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { REGIONS, ELECTION_TYPES, SITE_CONFIG } from '../../../lib/constants';
 import { getCandidatesByRegion } from '../../../lib/candidates';
@@ -59,7 +60,9 @@ export default async function RegionPage({ params }) {
       </div>
 
       <div className="container mx-auto px-4 max-w-7xl -mt-4 relative z-10">
-        <RegionPageClient candidates={candidates} region={region} />
+        <Suspense fallback={<div className="text-center py-10 text-slate-400">로딩 중...</div>}>
+          <RegionPageClient candidates={candidates} region={region} />
+        </Suspense>
       </div>
     </div>
   );

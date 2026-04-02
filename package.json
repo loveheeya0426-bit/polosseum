@@ -15,7 +15,8 @@
     "generate-mock": "node scripts/generate-mock.mjs",
     "sitemap": "node scripts/generate-sitemap.mjs",
     "deploy": "node scripts/deploy.mjs",
-    "automate": "node scripts/automate.mjs"
+    "automate": "node scripts/automate.mjs",
+    "fetch-assembly": "node scripts/fetch-assembly.mjs"
   },
   "dependencies": {
     "chart.js": "^4.5.1",

@@ -9,7 +9,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Radar } from 'react-chartjs-2';
-import { STAT_LABELS } from '../lib/constants';
+import { STAT_LABELS, ASSEMBLY_STAT_LABELS } from '../lib/constants';
 
 ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
@@ -19,11 +19,15 @@ const COLORS = [
   { bg: 'rgba(16, 185, 129, 0.35)', border: 'rgb(16, 185, 129)' },
 ];
 
-export default function StatChart({ candidates }) {
+export default function StatChart({ candidates, statLabels }) {
   if (!candidates || candidates.length === 0) return null;
 
-  const labels = Object.keys(STAT_LABELS).map(k => STAT_LABELS[k].label);
-  const statKeys = Object.keys(STAT_LABELS);
+  // 자동 감지: 국회의원 스탯 키가 있으면 ASSEMBLY_STAT_LABELS 사용
+  const activeLabels = statLabels
+    || (candidates[0]?.stats?.intelligence != null ? ASSEMBLY_STAT_LABELS : STAT_LABELS);
+
+  const labels = Object.keys(activeLabels).map(k => activeLabels[k].label);
+  const statKeys = Object.keys(activeLabels);
 
   const data = {
     labels,
