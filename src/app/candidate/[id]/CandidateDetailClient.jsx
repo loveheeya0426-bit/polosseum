@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import StatChart from '../../../components/StatChart';
 import AdBanner from '../../../components/AdBanner';
+import ShareButtons from '../../../components/ShareButtons';
 import { STAT_LABELS } from '../../../lib/constants';
 
 function decodeHtml(text) {
@@ -137,8 +138,17 @@ function PledgeSection({ candidate }) {
 }
 
 export default function CandidateDetailClient({ candidate }) {
+  const shareTitle = `${candidate.name} - ${candidate.electionType} 후보 스탯 분석 | 폴로세움`;
+  const shareDesc = `${candidate.region} ${candidate.party} ${candidate.name} 후보의 스탯을 확인해보세요!`;
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+
   return (
     <div className="space-y-6 pb-10">
+      {/* Share Buttons */}
+      <div className="flex justify-end">
+        <ShareButtons title={shareTitle} description={shareDesc} url={shareUrl} />
+      </div>
+
       {/* Stat Chart */}
       <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-4 md:p-8">
         <h2 className="text-xl font-black text-slate-800 mb-4 text-center">스탯 레이더 분석</h2>

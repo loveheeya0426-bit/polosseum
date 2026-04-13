@@ -40,6 +40,25 @@ function generate() {
   urls.push({ loc: '/terms/', priority: '0.3', changefreq: 'monthly' });
   urls.push({ loc: '/contact/', priority: '0.4', changefreq: 'monthly' });
 
+  // 블로그 페이지
+  urls.push({ loc: '/blog/', priority: '0.7', changefreq: 'weekly' });
+
+  const BLOG_SLUGS = [
+    '2026-local-election-guide', '2026-battleground-regions', 'early-voting-guide',
+    'election-types-explained', 'how-to-choose-candidate', 'how-to-read-election-pamphlet',
+    'what-local-council-does', 'candidate-property-disclosure', 'youth-voting-guide',
+    'election-campaign-rules', 'local-budget-explained', 'how-polls-work',
+    'election-day-checklist', 'compare-candidates-tips', 'political-party-platforms-2026',
+  ];
+  for (const slug of BLOG_SLUGS) {
+    urls.push({ loc: `/blog/${slug}/`, priority: '0.6', changefreq: 'weekly' });
+  }
+
+  // 기타 주요 페이지
+  urls.push({ loc: '/assembly/', priority: '0.8', changefreq: 'weekly' });
+  urls.push({ loc: '/vote/', priority: '0.7', changefreq: 'weekly' });
+  urls.push({ loc: '/debate/', priority: '0.7', changefreq: 'weekly' });
+
   // 지역 페이지
   for (const slug of REGIONS) {
     urls.push({ loc: `/region/${slug}/`, priority: '0.8', changefreq: 'daily' });
